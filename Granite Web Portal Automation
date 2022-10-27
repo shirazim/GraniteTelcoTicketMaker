@@ -1,0 +1,104 @@
+$workingPath = <Workingpath>
+Add-Type -Path "$($workingPath)\WebDriver.dll"
+
+do {
+    $username = read-host "Enter your GRANITE username:" 
+} until ($username)
+
+do {
+    $password = read-host "Enter your GRANITE password:" 
+} until ($password)
+
+do {
+  $ticket = read-host "Enter the internal ticket number"
+} until ($ticket)
+
+do{
+  $problem = read-host "Enter the problem description"
+} until ($problem)
+
+do{
+$phone = read-host "Enter the phone number"
+} until ($phone)
+
+#opens a headless browser
+$ChromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
+$ChromeOptions.addArguments('headless')
+$ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
+
+#navigates to the Granite portal
+$ChromeDriver.Navigate().GoToURL('https://rockreports.granitenet.com/repair')
+
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="UserName"]')).SendKeys($username)
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="Password"]')).SendKeys($password)
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::ClassName("mdl-button__ripple-container")).click()
+if($ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('/html/body/div[2]/div/div/div[1]/div/form/div/div[2]/div[1]'))){
+    write-host "Incorrect credentials"
+    $ChromeDriver.close()
+}
+
+Start-Sleep -Seconds 8
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[1]/div/div[2]/button')).click()
+Start-Sleep -Seconds 8
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-input-13"]')).SendKeys("$circuitid")
+
+if($ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-error-1"]'))){
+    Write-Host "The circuit ID is incorrect"
+    $ChromeDriver.close()
+}elseif($ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[3]/div/div/h5'))){
+    write-host "Invalid circuit ID"
+    $ChromeDriver.close()
+}elseif($ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-error-0"]'))){
+    write-host "Invalid circuit ID"
+    $ChromeDriver.close()
+}
+
+
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="cdk-accordion-child-1"]/div/form/div/div[4]/div/button[1]')).click()
+Start-Sleep -Seconds 5
+
+#Reads which city this is
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[3]/div/rr5-search-accounts-results/table/tbody/tr/td[7]')).text
+if(!$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[3]/div/rr5-search-accounts-results/table/tbody/tr/td[1]/button/span'))){
+    write-host "Granite isn't finding this circuit"
+    $ChromeDriver.close()
+}
+
+
+#Clicks "Create repair request" (this is the page where you verify the circuit)
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[3]/div/rr5-search-accounts-results/table/tbody/tr/td[1]/button/span')).click()
+Start-Sleep -Seconds 8
+#this page shows you all the grayed out details about the circuit. The next line clicks continue
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[3]/div/div[2]/div/div[10]/div/button[2]')).click()
+Start-Sleep -Seconds 8
+
+#Adds in contact info
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::name('mainContactPhone')).clear()
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::name('mainContactPhone')).SendKeys("<Your phone number>")
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-input-33"]')).SendKeys("Manager")
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-input-33"]')).SendKeys()
+$ChromeDriver.FindElements([OpenQA.Selenium.By]::XPath('//*[@id="mat-input-34"]')).SendKeys($phone)
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::name('email1')).clear()
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::name('email1')).SendKeys("<Your email>")
+######
+
+#clicks continue past the info page
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::xpath('//*[@id="cdk-step-content-0-0"]/div/button[2]/span')).click()
+Start-Sleep -Seconds 5
+
+    
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::xpath('//*[@id="mat-slide-toggle-1"]/label/div')).click()
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::name('customerInternalTicketNumber')).SendKeys("$ticket")
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::id('mat-input-38')).SendKeys("$problem")
+
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::xpath('//*[@id="cdk-step-content-0-1"]/div/button[2]')).click()
+Start-Sleep -Seconds 8
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::xpath('//*[@id="cdk-step-content-0-2"]/div/button[2]')).click()
+Start-Sleep -Seconds 10
+
+#this writes the Granite ticket number to the console
+$ChromeDriver.FindElement([OpenQA.Selenium.By]::xpath('//*[@id="pcoded"]/div[2]/div/div/div/div/div/div/div/ng-component/ng-component/div[2]/div/b')).text
+
+
+
+$ChromeDriver.close()
